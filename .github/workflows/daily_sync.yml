@@ -25,23 +25,20 @@ jobs:
           echo "✅ 机器人拿到钥匙了（虽然我看不到内容，但它不是空的）。"
         fi
         
-    - name: 2. 检出数据仓代码 (作为临时数据源)
-      uses: actions/checkout@v4
-      with:
-        # ⚠️ 修正 1：仓库名就是仓库名，不要带后缀
-        repository: RayD-123/micro-quant-trading-lab-2
+    - name: 2. 暴力检出数据仓 (原生 Git 模式)
+      env:
+        # 显式把钥匙转为环境变量
+        MY_TOKEN: ${{ secrets.MY_SYNC_TOKEN }}
+      run: |
+        echo "正在清理旧目录..."
+        rm -rf temp_data_repo
         
-        # ⚠️ 修正 2：分支名必须单独写在这里
-        ref: field-6.0
+        echo "开始克隆数据仓..."
+        # ⚠️ 注意这里：我们把 Token 直接塞进 URL，这是最硬核的认证方式
+        git clone --depth 1 --branch field-6.0 https://x-access-token:${MY_TOKEN}@github.com/github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
         
-        # 存放的临时文件夹名字（保持不变）
-        path: temp_data_repo
-        
-        # 你的万能钥匙（保持不变）
-        token: ${{ secrets.MY_SYNC_TOKEN }}
-        
-        # 建议加上这行，防止多重身份冲突
-        persist-credentials: false
+        echo "检查克隆结果..."
+        ls -la temp_data_repo
     
     - name: 3. 安装运行环境
       uses: actions/setup-python@v5
