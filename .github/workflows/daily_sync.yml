@@ -23,7 +23,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         # ⚠️ 请把这里的 "YourGitHubName" 换成你真实的 GitHub 用户名
-        repository: YourGitHubName/micro-quant-trading-lab-2-field-6.0
+        repository: micro-quant-simulator/micro-quant-trading-lab-2-field-6.0
         path: temp_data_repo
 
     # 3. 设置 Python 环境
