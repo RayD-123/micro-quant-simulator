@@ -1,0 +1,52 @@
+name: Daily Data Sync (Lab-2 to Simulator)
+
+on:
+  workflow_dispatch: # 允许你随时手动点击运行测试
+  schedule:
+    # 纽约时间 4:30 PM (美股收盘，爬虫结束之后) -> UTC 20:30
+    # 周一到周五运行 (1-5)
+    - cron: '30 20 * * 1-5'
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 赋予写入代码仓的权限
+
+    steps:
+    # 1. 检出当前的回测仓代码
+    - name: Checkout Simulator Repo
+      uses: actions/checkout@v4
+
+    # 2. 检出你的数据仓 (Lab-2) 代码，放在一个叫 temp_data_repo 的临时文件夹里
+    - name: Checkout Data Repo (Lab-2)
+      uses: actions/checkout@v4
+      with:
+        # ⚠️ 请把这里的 "YourGitHubName" 换成你真实的 GitHub 用户名
+        repository: YourGitHubName/micro-quant-trading-lab-2-field-6.0
+        path: temp_data_repo
+
+    # 3. 设置 Python 环境
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    # 4. 运行我们刚刚写的 Python 搬运工脚本
+    - name: Run Python Shallow Copy
+      run: python sync_data.py
+
+    # 5. 删除临时的源数据文件夹 (保持回测仓干净)
+    - name: Clean up temporary files
+      run: rm -rf temp_data_repo
+
+    # 6. 把更新后的历史数据提交并推送到回测仓
+    - name: Commit and Push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Data Sync"
+        git add history_database/
+        
+        # 如果有新数据就 commit，如果没有变更就不报错跳过
+        git commit -m "🔄 自动同步: 盘后更新 history_database 数据" || echo "No changes to commit"
+        git push
