@@ -25,24 +25,21 @@ jobs:
           echo "✅ 机器人拿到钥匙了（虽然我看不到内容，但它不是空的）。"
         fi
         
-    - name: 2. 下载数据仓代码 (ZIP 模式)
+    - name: 2. 检出数据仓代码 (稳定版认证)
       env:
         MY_TOKEN: ${{ secrets.MY_SYNC_TOKEN }}
       run: |
-        echo "正在通过 API 下载数据仓 ZIP 包..."
-        # 1. 下载 ZIP 包
-        curl -L -H "Authorization: token $MY_TOKEN" \
-          -o repo.zip \
-          https://github.com/RayD-123/micro-quant-trading-lab-2/archive/refs/heads/field-6.0.zip
+        echo "正在清理并准备环境..."
+        rm -rf temp_data_repo
         
-        # 2. 解压
-        unzip repo.zip
+        # ⚠️ 核心操作：手动把 Token 喂给 Git 的全局凭据助手
+        # 这一步能彻底解决 "could not read Username" 的问题
+        git config --global url."https://x-access-token:${MY_TOKEN}@github.com/".insteadOf "https://github.com/"
         
-        # 3. 把解压出来的文件夹重命名为 temp_data_repo，方便后续脚本读取
-        # 注意：GitHub ZIP 解压出来的文件夹名通常是 仓库名-分支名
-        mv micro-quant-trading-lab-2-field-6.0 temp_data_repo
+        echo "开始克隆..."
+        git clone --depth 1 --branch field-6.0 https://github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
         
-        echo "✅ 下载并解压完成！"
+        echo "检查结果..."
         ls -la temp_data_repo
     
     - name: 3. 安装运行环境
