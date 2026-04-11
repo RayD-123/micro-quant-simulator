@@ -19,10 +19,11 @@ jobs:
     - name: 2. 检出数据仓代码 (作为临时数据源)
       uses: actions/checkout@v4
       with:
-        # 这里指向你的数据仓
         repository: RayD-123/micro-quant-trading-lab-2
         path: temp_data_repo
-        # --- 这里的钥匙指向你在 Secrets 里存的 MY_SYNC_TOKEN ---
+        # --- 关键补丁 1: 指定正确的分支 ---
+        ref: field-6.0
+        # --- 关键补丁 2: 使用你配置好的 Secrets 钥匙 ---
         token: ${{ secrets.MY_SYNC_TOKEN }}
 
     - name: 3. 安装运行环境
@@ -31,7 +32,7 @@ jobs:
         python-version: '3.9'
     
     - name: 4. 安装必要插件
-      run: pip install pandas yfinance numpy  # 这里加上回测需要的库
+      run: pip install pandas yfinance numpy  # 确保包含回测所需库
 
     - name: 5. 执行同步并跑回测
       run: python sync_data.py
@@ -40,7 +41,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "Auto-Backtest-Bot"
-        # 如果 history_database 文件夹不存在则创建
+        # 确保 history_database 存在，否则 git add 会报错
         mkdir -p history_database
         git add history_database/
         git add daily_equity.csv || echo "No changes to daily_equity.csv"
