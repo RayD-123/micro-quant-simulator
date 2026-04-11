@@ -1,52 +1,44 @@
-name: Daily Data Sync (Lab-2 to Simulator)
+name: Daily Auto Backtest
 
 on:
-  workflow_dispatch: # 允许你随时手动点击运行测试
+  workflow_dispatch:
   schedule:
-    # 纽约时间 4:30 PM (美股收盘，爬虫结束之后) -> UTC 20:30
-    # 周一到周五运行 (1-5)
-    - cron: '30 20 * * 1-5'
+    # 纽约时间周一到周五的 24:00 (即 UTC 04:00 周二到周六)
+    - cron: '0 4 * * 2-6'
 
 jobs:
-  sync-data:
+  build-and-run:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 赋予写入代码仓的权限
+      contents: write
 
     steps:
-    # 1. 检出当前的回测仓代码
-    - name: Checkout Simulator Repo
+    - name: 1. 检出回测仓代码
       uses: actions/checkout@v4
 
-    # 2. 检出你的数据仓 (Lab-2) 代码，放在一个叫 temp_data_repo 的临时文件夹里
-    - name: Checkout Data Repo (Lab-2)
+    - name: 2. 检出数据仓代码 (作为临时数据源)
       uses: actions/checkout@v4
       with:
-        # ⚠️ 请把这里的 "YourGitHubName" 换成你真实的 GitHub 用户名
+        # ⚠️ 请务必把下面的名字改成你自己的 GitHub 用户名/仓库名
         repository: micro-quant-simulator/micro-quant-trading-lab-2-field-6.0
         path: temp_data_repo
 
-    # 3. 设置 Python 环境
-    - name: Set up Python
+    - name: 3. 安装运行环境
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
+    
+    - name: 4. 安装必要插件
+      run: pip install pandas yfinance numpy  # 这里加上回测需要的库
 
-    # 4. 运行我们刚刚写的 Python 搬运工脚本
-    - name: Run Python Shallow Copy
+    - name: 5. 执行同步并跑回测
       run: python sync_data.py
 
-    # 5. 删除临时的源数据文件夹 (保持回测仓干净)
-    - name: Clean up temporary files
-      run: rm -rf temp_data_repo
-
-    # 6. 把更新后的历史数据提交并推送到回测仓
-    - name: Commit and Push changes
+    - name: 6. 自动保存回测结果 (Equity CSV 等)
       run: |
         git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action Data Sync"
+        git config --local user.name "Auto-Backtest-Bot"
         git add history_database/
-        
-        # 如果有新数据就 commit，如果没有变更就不报错跳过
-        git commit -m "🔄 自动同步: 盘后更新 history_database 数据" || echo "No changes to commit"
+        git add daily_equity.csv || echo "No equity file"
+        git commit -m "📊 自动化更新：同步数据并更新回测净值 (纽约时间午夜版)" || echo "Nothing to commit"
         git push
