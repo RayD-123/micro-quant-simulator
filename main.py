@@ -1,7 +1,8 @@
 import os
 import io
 import pandas as pd
-from datetime import datetime
+import yfinance as yf
+from datetime import datetime, timedelta
 
 # 导入我们的“量化三剑客”
 from portfolio import Portfolio
@@ -15,7 +16,7 @@ def load_all_csvs(folder_path="history_database"):
         folder_path = "."
         
     csv_files = [f for f in os.listdir(folder_path) if f.startswith('data_') and f.endswith('.csv')]
-    csv_files.sort() # 确保 3 月在 4 月前面
+    csv_files.sort() # 确保时间顺序
     
     if not csv_files:
         raise FileNotFoundError("❌ 没找到任何历史数据文件 (data_*.csv)！")
@@ -31,64 +32,71 @@ def load_all_csvs(folder_path="history_database"):
     return csv_buffer
 
 def run_backtest():
-    print("🚀 启动 Quant Sniper 6.1 真实回测引擎...")
-    print("=" * 60)
-    
-    # 1. 组装数据燃料
-    csv_buffer = load_all_csvs("history_database")
-    
-    # 2. 实例化系统组件
-    print("📦 正在初始化账本、时间机器和交易员...")
-    pf = Portfolio()
-    feeder = DataFeeder(csv_buffer)
-    
-    # 注意：这里我们不传 mock_prices，让引擎自动使用 yfinance 获取真实历史数据
-    engine = ExecutionEngine(portfolio=pf, data_feeder=feeder)
-    
-    # 用于画图的每日资产记录
+    print("🚀 启动 Quant Sniper 6.1 真实回测引擎 (含持仓追踪补丁)...")
+    print("=" * 65)
+
+    # 1. 初始化组件
+    csv_stream = load_all_csvs()
+    feeder = DataFeeder(csv_stream)
+    my_portfolio = Portfolio()
+    engine = ExecutionEngine(portfolio=my_portfolio)
+
     daily_equity_log = []
-    
-    print("\n" + "-" * 65)
-    print(f"{'日期 (Date)':<15} | {'总资产 (Total Equity)':<20} | {'当前持仓数':<10}")
-    print("-" * 65)
-    
-    # 3. 开启“时光机”主循环
+
+    # 2. 核心回放循环
     try:
         while True:
-            # DataFeeder 和 Engine 的交互逻辑
-            # 注意：Claude 设计的 engine.step() 内部其实调用了 feeder.get_next_batch()
-            # 如果 Claude 的版本需要传参数，请根据实际情况调整，这里假设使用 Claude 最新的设计：
-            engine.step() 
+            # 获取下一天的数据信号
+            current_date, csv_signals = feeder.get_next_batch()
             
-            # 安全地获取当前的总资产和持仓数（适配 Claude 的私有变量设计）
-            # Claude 提到变量是私有的(_cash, _positions)，并且应该有 property 暴露
-            equity = getattr(pf, 'total_equity', 100000.0) 
-            # 如果 Claude 没有暴露 total_equity 属性，我们手动计算兜底：
-            if not hasattr(pf, 'total_equity'):
-                cash = getattr(pf, '_cash', 100000.0)
-                positions = getattr(pf, '_positions', {})
-                equity = cash + sum(pos.current_value for pos in positions.values())
+            # --- 【新增逻辑：持仓监控追踪器】 ---
+            # 1. 找出当前持仓中，没出现在今天扫描报告里的股票
+            current_holdings = list(my_portfolio.positions.keys())
+            # 兼容旧代码，有些版本叫 'Signal' 有些叫 'Action'
+            action_col = 'Signal' if 'Signal' in csv_signals.columns else 'Action'
+            csv_tickers = csv_signals['Ticker'].tolist()
             
-            positions_dict = getattr(pf, '_positions', getattr(pf, 'positions', {}))
-            pos_count = len(positions_dict)
+            missing_tickers = [t for t in current_holdings if t not in csv_tickers]
             
-            # 获取最近处理的日期 (兜底策略)
-            current_date = getattr(engine, 'last_signal_date', "Running...")
+            if missing_tickers:
+                print(f"🔍 追踪器：发现 {len(missing_tickers)} 只持仓股 ({missing_tickers}) 不在今日扫描单中。")
+                
+                # 为这些“失踪”股票构造补全信号
+                tracker_signals = []
+                for ticker in missing_tickers:
+                    # 默认状态为“🟡 持有”。
+                    # ExecutionEngine 收到此信号后，会强制去抓取该股当天的 Close 价格更新市值。
+                    tracker_signals.append({
+                        'Ticker': ticker,
+                        'Sector': 'Holding-Tracker',
+                        'Action': '🟡 持有',
+                        'Signal': '🟡 持有'
+                    })
+                
+                # 将补全信号合并进今日信号包
+                if tracker_signals:
+                    df_missing = pd.DataFrame(tracker_signals)
+                    csv_signals = pd.concat([csv_signals, df_missing], ignore_index=True)
+
+            # 3. 将完整的信号包（扫描结果 + 追踪补位）喂给引擎执行
+            result = engine.step(current_date, csv_signals)
             
-            print(f"{str(current_date):<15} | ${equity:>12,.2f} {'':<6} | {pos_count} 支股票")
+            # 打印每日审计行
+            equity = my_portfolio.total_equity
+            pos_count = len(my_portfolio.positions)
+            print(f"📅 {current_date} | 净值: ${equity:>12,.2f} | 持仓: {pos_count} 支")
             
-            # 记录下来用于算回撤
+            # 记录历史用于生成报表
             daily_equity_log.append({'Date': str(current_date), 'Equity': equity})
             
     except StopIteration:
         print("\n🛑 历史信号回放完毕！")
         if hasattr(engine, 'flush_pending_orders'):
-            print("⏳ 正在清理最后一日的挂单...")
             engine.flush_pending_orders()
     except Exception as e:
         print(f"\n❌ 回测中断，遇到错误: {e}")
 
-    # 4. 统计与审计
+    # 4. 统计与审计报告
     print("\n" + "=" * 65)
     print("📊 Quant Sniper 6.1 回测业绩终期审计报告")
     print("=" * 65)
@@ -106,14 +114,11 @@ def run_backtest():
         df_equity['Drawdown'] = (df_equity['Equity'] - df_equity['Peak']) / df_equity['Peak']
         max_drawdown = df_equity['Drawdown'].min() * 100
         
-        print(f"💰 初始本金:   ${initial_capital:,.2f}")
-        print(f"🏦 最终总资产: ${final_capital:,.2f}")
-        print(f"📈 累计收益率: {total_return:+.2f}%")
-        print(f"📉 最大回撤:   {max_drawdown:.2f}% (数字越接近0越抗跌)")
-        print(f"\n✅ 每日资产曲线已导出至当前目录的 'daily_equity.csv'")
-    else:
-        print("⚠️ 回测未产生有效数据。")
-    print("=" * 65)
+        print(f"起始资金: ${initial_capital:,.2f}")
+        print(f"最终净值: ${final_capital:,.2f}")
+        print(f"累计收益: {total_return:+.2f}%")
+        print(f"最大回撤: {max_drawdown:.2f}%")
+        print(f"结果已保存至: daily_equity.csv")
 
 if __name__ == "__main__":
     run_backtest()
