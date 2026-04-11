@@ -32,14 +32,15 @@ jobs:
         echo "正在清理并准备环境..."
         rm -rf temp_data_repo
         
-        # ⚠️ 核心操作：手动把 Token 喂给 Git 的全局凭据助手
-        # 这一步能彻底解决 "could not read Username" 的问题
+        # ⚠️ 核心操作：通过 Git 全局配置，把 Token 强行注入所有 github.com 的请求
+        # 这能彻底解决 "could not read Username" 的问题
         git config --global url."https://x-access-token:${MY_TOKEN}@github.com/".insteadOf "https://github.com/"
         
-        echo "开始克隆..."
+        echo "开始克隆数据仓..."
+        # 确保分支名 field-6.0 拼写正确
         git clone --depth 1 --branch field-6.0 https://github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
         
-        echo "检查结果..."
+        echo "检查克隆结果..."
         ls -la temp_data_repo
     
     - name: 3. 安装运行环境
@@ -57,9 +58,15 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "Auto-Backtest-Bot"
-        # 确保 history_database 存在，否则 git add 会报错
+        
+        # 确保 history_database 存在
         mkdir -p history_database
+        
         git add history_database/
         git add daily_equity.csv || echo "No changes to daily_equity.csv"
+        
+        # 提交更改
         git commit -m "🤖 自动同步数据并更新回测报告 [$(date)]" || echo "No changes to commit"
+        
+        # 因为在第 2 步设置了全局 insteadOf，这里的推送会自动携带 Token 权限
         git push
