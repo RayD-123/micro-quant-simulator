@@ -28,13 +28,21 @@ jobs:
     - name: 2. 检出数据仓代码 (作为临时数据源)
       uses: actions/checkout@v4
       with:
+        # ⚠️ 修正 1：仓库名就是仓库名，不要带后缀
         repository: RayD-123/micro-quant-trading-lab-2
-        path: temp_data_repo
-        # --- 关键补丁 1: 指定正确的分支 ---
+        
+        # ⚠️ 修正 2：分支名必须单独写在这里
         ref: field-6.0
-        # --- 关键补丁 2: 使用你配置好的 Secrets 钥匙 ---
+        
+        # 存放的临时文件夹名字（保持不变）
+        path: temp_data_repo
+        
+        # 你的万能钥匙（保持不变）
         token: ${{ secrets.MY_SYNC_TOKEN }}
-
+        
+        # 建议加上这行，防止多重身份冲突
+        persist-credentials: false
+    
     - name: 3. 安装运行环境
       uses: actions/setup-python@v5
       with:
