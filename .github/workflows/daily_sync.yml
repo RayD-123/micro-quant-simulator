@@ -25,16 +25,25 @@ jobs:
           echo "✅ 机器人拿到钥匙了（虽然我看不到内容，但它不是空的）。"
         fi
         
-    - name: 2. 检出数据仓代码
-      uses: actions/checkout@v4
-      with:
-        # 这里绝对不能写错，检查一下是不是连字符 -
-        repository: RayD-123/micro-quant-trading-lab-2
-        ref: field-6.0
-        path: temp_data_repo
-        # ⚠️ 这里是重中之重！
-        token: ${{ secrets.MY_SYNC_TOKEN }}
-        persist-credentials: true
+    - name: 2. 下载数据仓代码 (ZIP 模式)
+      env:
+        MY_TOKEN: ${{ secrets.MY_SYNC_TOKEN }}
+      run: |
+        echo "正在通过 API 下载数据仓 ZIP 包..."
+        # 1. 下载 ZIP 包
+        curl -L -H "Authorization: token $MY_TOKEN" \
+          -o repo.zip \
+          https://github.com/RayD-123/micro-quant-trading-lab-2/archive/refs/heads/field-6.0.zip
+        
+        # 2. 解压
+        unzip repo.zip
+        
+        # 3. 把解压出来的文件夹重命名为 temp_data_repo，方便后续脚本读取
+        # 注意：GitHub ZIP 解压出来的文件夹名通常是 仓库名-分支名
+        mv micro-quant-trading-lab-2-field-6.0 temp_data_repo
+        
+        echo "✅ 下载并解压完成！"
+        ls -la temp_data_repo
     
     - name: 3. 安装运行环境
       uses: actions/setup-python@v5
