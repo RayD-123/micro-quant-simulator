@@ -25,22 +25,16 @@ jobs:
           echo "✅ 机器人拿到钥匙了（虽然我看不到内容，但它不是空的）。"
         fi
         
-    - name: 2. 暴力检出数据仓 (Header 认证模式)
-      env:
-        MY_TOKEN: ${{ secrets.MY_SYNC_TOKEN }}
-      run: |
-        echo "正在清理并准备环境..."
-        rm -rf temp_data_repo
-        
-        # 使用 Base64 编码认证信息（这是最稳的认证方式，无视特殊字符）
-        # 我们直接告诉 Git：在请求头里带上这把钥匙
-        git -c http.extraheader="AUTHORIZATION: basic $(echo -n x-access-token:${MY_TOKEN} | base64)" \
-            clone --depth 1 --branch field-6.0 \
-            https://github.com/RayD-123/micro-quant-trading-lab-2.git \
-            temp_data_repo
-            
-        echo "检查克隆结果..."
-        ls -la temp_data_repo
+    - name: 2. 检出数据仓代码
+      uses: actions/checkout@v4
+      with:
+        # 这里绝对不能写错，检查一下是不是连字符 -
+        repository: RayD-123/micro-quant-trading-lab-2
+        ref: field-6.0
+        path: temp_data_repo
+        # ⚠️ 这里是重中之重！
+        token: ${{ secrets.MY_SYNC_TOKEN }}
+        persist-credentials: true
     
     - name: 3. 安装运行环境
       uses: actions/setup-python@v5
