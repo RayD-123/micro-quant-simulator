@@ -20,7 +20,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         # ⚠️ 请务必把下面的名字改成你自己的 GitHub 用户名/仓库名
-        repository: Nemo1122/micro-quant-trading-lab-2-field-6.0
+        repository: RayD-123/micro-quant-trading-lab-2-field-6.0
         path: temp_data_repo
         
 
