@@ -27,17 +27,16 @@ jobs:
         
     - name: 2. 暴力检出数据仓 (原生 Git 模式)
       env:
-        # 显式把钥匙转为环境变量
         MY_TOKEN: ${{ secrets.MY_SYNC_TOKEN }}
       run: |
         echo "正在清理旧目录..."
         rm -rf temp_data_repo
         
         echo "开始克隆数据仓..."
-        # ⚠️ 注意这里：我们把 Token 直接塞进 URL，这是最硬核的认证方式
-        git clone --depth 1 --branch field-6.0 https://x-access-token:${MY_TOKEN}@github.com/github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
+        # ⚠️ 修正后的地址，只有一个 github.com
+        git clone --depth 1 --branch field-6.0 https://x-access-token:${MY_TOKEN}@github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
         
-        echo "检查克隆结果..."
+        echo "检查文件是否到位..."
         ls -la temp_data_repo
     
     - name: 3. 安装运行环境
