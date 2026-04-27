@@ -33,11 +33,9 @@ jobs:
         rm -rf temp_data_repo
         
         # ⚠️ 核心操作：通过 Git 全局配置，把 Token 强行注入所有 github.com 的请求
-        # 这能彻底解决 "could not read Username" 的问题
         git config --global url."https://x-access-token:${MY_TOKEN}@github.com/".insteadOf "https://github.com/"
         
         echo "开始克隆数据仓..."
-        # 确保分支名 field-6.0 拼写正确
         git clone --depth 1 --branch field-6.0 https://github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
         
         echo "检查克隆结果..."
@@ -49,24 +47,22 @@ jobs:
         python-version: '3.9'
     
     - name: 4. 安装必要插件
-      run: pip install pandas yfinance numpy  # 确保包含回测所需库
+      run: pip install pandas yfinance numpy matplotlib  # 新增 matplotlib 支持画图
 
     - name: 5. 执行同步并跑回测
       run: python sync_data.py
 
-    - name: 6. 自动保存回测结果 (Equity CSV 等)
+    - name: 6. 生成可视化业绩图表
+      run: python visualizer.py  # 运行画图脚本
+
+    - name: 7. 自动保存回测结果与图表
       run: |
         git config --local user.email "action@github.com"
-        git config --local user.name "Auto-Backtest-Bot"
+        git config --local user.name "GitHub Action Bot"
         
-        # 确保 history_database 存在
-        mkdir -p history_database
+        # 确保包含 csv、历史数据库和新生成的 png 图片
+        git add daily_equity.csv history_database/ *.png
         
-        git add history_database/
-        git add daily_equity.csv || echo "No changes to daily_equity.csv"
-        
-        # 提交更改
-        git commit -m "🤖 自动同步数据并更新回测报告 [$(date)]" || echo "No changes to commit"
-        
-        # 因为在第 2 步设置了全局 insteadOf，这里的推送会自动携带 Token 权限
+        # 即使图片没变化也不报错
+        git commit -m "📊 [Auto] Update Daily Backtest Results & Charts" || exit 0
         git push
