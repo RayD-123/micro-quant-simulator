@@ -54,7 +54,13 @@ jobs:
     - name: 5. 执行同步并跑回测
       run: python sync_data.py
 
-    - name: 6. 自动保存回测结果 (Equity CSV 等)
+    # ==========================
+    # 【新增一】: 跑完回测后，运行画图代码
+    # ==========================
+    - name: 6. 生成可视化业绩图表
+      run: python visualizer.py
+
+    - name: 7. 自动保存回测结果 (Equity CSV 及图表等)
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "Auto-Backtest-Bot"
@@ -64,6 +70,11 @@ jobs:
         
         git add history_database/
         git add daily_equity.csv || echo "No changes to daily_equity.csv"
+        
+        # ==========================
+        # 【新增二】: 把生成的图片加进暂存区
+        # ==========================
+        git add *.png || echo "No changes to images"
         
         # 提交更改
         git commit -m "🤖 自动同步数据并更新回测报告 [$(date)]" || echo "No changes to commit"
