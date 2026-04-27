@@ -46,8 +46,8 @@ jobs:
       with:
         python-version: '3.9'
     
-    - name: 4. 安装必要插件
-      run: pip install pandas yfinance numpy matplotlib  # 新增 matplotlib 支持画图
+   - name: 4. 安装必要插件
+      run: pip install -r requirements.txt
 
     - name: 5. 执行同步并跑回测
       run: python sync_data.py
