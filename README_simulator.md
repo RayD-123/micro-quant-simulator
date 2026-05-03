@@ -1,6 +1,6 @@
 # micro-quant-simulator
 This is the first version of simulator based on the data from lab-2
-# 🚀 Micro Quant Simulator (量化回测与数据同步自动化系统)
+# 🚀 Micro Quant Simulator (低频量化回测与数据同步自动化系统)
 
 ![Python](https://img.shields.io/badge/Python-3.9-blue)
 ![GitHub Actions](https://img.shields.io/badge/Automation-GitHub_Actions-orange)
