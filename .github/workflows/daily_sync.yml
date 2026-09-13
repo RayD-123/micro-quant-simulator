@@ -15,48 +15,30 @@ jobs:
     steps:
     - name: 1. 检出回测仓代码
       uses: actions/checkout@v4
-      
-    - name: 临时权限检查
-      run: |
-        if [ -z "${{ secrets.MY_SYNC_TOKEN }}" ]; then
-          echo "❌ 警告：机器人手里是空的，它没读到 Secret！"
-          exit 1
-        else
-          echo "✅ 机器人拿到钥匙了（虽然我看不到内容，但它不是空的）。"
-        fi
-        
-    - name: 2. 检出数据仓代码 (稳定版认证)
-      env:
-        MY_TOKEN: ${{ secrets.MY_SYNC_TOKEN }}
+
+    - name: 2. 检出数据仓代码 (公开仓免密模式)
       run: |
         echo "正在清理并准备环境..."
         rm -rf temp_data_repo
         
-        # ⚠️ 核心操作：通过 Git 全局配置，把 Token 强行注入所有 github.com 的请求
-        # 这能彻底解决 "could not read Username" 的问题
-        git config --global url."https://x-access-token:${MY_TOKEN}@github.com/".insteadOf "https://github.com/"
-        
         echo "开始克隆数据仓..."
-        # 确保分支名 field-6.0 拼写正确
+        # 数据仓已转为 Public，直接克隆，无需 Token
         git clone --depth 1 --branch field-6.0 https://github.com/RayD-123/micro-quant-trading-lab-2.git temp_data_repo
         
         echo "检查克隆结果..."
         ls -la temp_data_repo
-    
+
     - name: 3. 安装运行环境
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
-    
+
     - name: 4. 安装必要插件
-      run: pip install pandas yfinance numpy matplotlib seaborn tabulate  # 确保包含回测所需库
+      run: pip install pandas yfinance numpy matplotlib seaborn tabulate
 
     - name: 5. 执行同步并跑回测
       run: python sync_data.py
 
-    # ==========================
-    # 【新增一】: 跑完回测后，运行画图代码
-    # ==========================
     - name: 6. 生成可视化业绩图表
       run: python visualizer.py
 
@@ -65,19 +47,11 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "Auto-Backtest-Bot"
         
-        # 确保 history_database 存在
         mkdir -p history_database
         
         git add history_database/
         git add daily_equity.csv || echo "No changes to daily_equity.csv"
-        
-        # ==========================
-        # 【新增二】: 把生成的图片加进暂存区
-        # ==========================
         git add *.png || echo "No changes to images"
         
-        # 提交更改
         git commit -m "🤖 自动同步数据并更新回测报告 [$(date)]" || echo "No changes to commit"
-        
-        # 因为在第 2 步设置了全局 insteadOf，这里的推送会自动携带 Token 权限
         git push
