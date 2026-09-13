@@ -1,5 +1,46 @@
 # micro-quant-simulator
 This is the first version of simulator based on the data from lab-2
+# 🚀 Micro Quant Simulator (Low-Frequency Quantitative Backtesting & Data Sync Automation System)
+
+![Python](https://img.shields.io/badge/Python-3.9-blue)
+![GitHub Actions](https://img.shields.io/badge/Automation-GitHub_Actions-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+This is a fully automated quantitative backtesting and data synchronization system based on GitHub Actions. It automatically pulls the latest strategy factors or market data from a private data repository daily, runs backtesting logic, and updates the account equity curve in real-time.
+
+## 📈 Performance Visualization
+
+> The system automatically updates the following charts after the daily backtest.
+
+### 1. Account Equity Curve
+![Total Assets Line Chart](report_total_assets_line.png)
+
+### 2. Daily Asset Composition (Equity vs Cash)
+![Asset Composition Bar Chart](report_asset_composition_bar.png)
+
+---
+
+## 🌟 Core Features
+
+- **Cross-Repo Auto Sync**: Securely checks out data from the private data repo (`micro-quant-trading-lab-2`) using a GitHub Fine-grained PAT.
+- **Daily Scheduled Backtest**: Automatically triggers the backtest task at 24:00 NY Time (UTC 04:00) daily.
+- **Dynamic Market Data Integration**: Built-in `yfinance` support to automatically fetch real-time US stock market data.
+- **Equity Tracking**: Automatically generates and updates `daily_equity.csv` to record daily net value changes.
+- **Auto-Updating Dashboard**: Automatically generates visualization PNGs and feeds them back to the README.
+
+## 🏗️ System Architecture
+
+1. **Trigger**: Scheduled daily or manual trigger via `Workflow Dispatch`.
+2. **Environment**: Spins up the latest Ubuntu VM, configured with Python 3.9.
+3. **Data Sync**: Syncs private repo data using `insteadOf` authentication.
+4. **Execution**: Runs `sync_data.py` to drive the backtest engine.
+5. **Visualization**: Runs `visualizer.py` to generate the latest performance charts.
+6. **Commit**: Auto-pushes generated `daily_equity.csv` and `.png` charts back to the repo.
+
+---
+
+# micro-quant-simulator
+This is the first version of simulator based on the data from lab-2
 # 🚀 Micro Quant Simulator (低频量化回测与数据同步自动化系统)
 
 ![Python](https://img.shields.io/badge/Python-3.9-blue)
